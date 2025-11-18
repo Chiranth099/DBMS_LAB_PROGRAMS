@@ -1,0 +1,138 @@
+CREATE DATABASE EMPLOYEE22;
+USE EMPLOYEE22;
+
+CREATE TABLE DEPT (
+    DEPTNO INT PRIMARY KEY,
+    DNAME VARCHAR(40),
+    DLOC VARCHAR(40)
+);
+
+CREATE TABLE EMPLOYEE22 (
+    EMPNO INT PRIMARY KEY,
+    ENAME VARCHAR(40),
+    MGR_NO INT,
+    HIREDATE DATE,
+    SAL DECIMAL(10,2),
+    DEPTNO INT,
+    FOREIGN KEY (DEPTNO) REFERENCES DEPT(DEPTNO)
+);
+
+CREATE TABLE PROJECT (
+    PNO INT PRIMARY KEY,
+    PLOC VARCHAR(40),
+    PNAME VARCHAR(50)
+);
+
+CREATE TABLE ASSIGNED_TO (
+    EMPNO INT,
+    PNO INT,
+    JOB_ROLE VARCHAR(40),
+    PRIMARY KEY (EMPNO, PNO),
+    FOREIGN KEY (EMPNO) REFERENCES EMPLOYEE22(EMPNO),
+    FOREIGN KEY (PNO) REFERENCES PROJECT(PNO)
+);
+
+CREATE TABLE INCENTIVES (
+    EMPNO INT,
+    INCENTIVE_DATE DATE,
+    INCENTIVE_AMOUNT DECIMAL(10,2),
+    FOREIGN KEY (EMPNO) REFERENCES EMPLOYEE22(EMPNO)
+);
+
+
+INSERT INTO DEPT VALUES
+(10, 'HR', 'Bengaluru'),
+(20, 'Finance', 'Hyderabad'),
+(30, 'IT', 'Mysuru'),
+(40, 'Marketing', 'Chennai'),
+(50, 'R&D', 'Bengaluru'),
+(60, 'Admin', 'Hyderabad');
+
+INSERT INTO EMPLOYEE22 VALUES
+(101, 'Amit', 1001, '2020-01-15', 60000, 10),
+(102, 'Priya', 1005, '2019-03-22', 55000, 20),
+(103, 'Rahul', 1001, '2021-07-10', 50000, 30),
+(104, 'Sneha', 1003, '2018-11-29', 52000, 30),
+(105, 'Kiran', 1005, '2022-02-18', 48000, 20),
+(106, 'Rhea', 1010, '2019-08-14', 65000, 50),
+(107, 'Arjun', 1001, '2023-04-03', 45000, 10);
+
+INSERT INTO PROJECT VALUES
+(1001, 'Bengaluru', 'ERP Upgrade'),
+(1002, 'Hyderabad', 'FinTrack'),
+(1003, 'Mysuru', 'AI System'),
+(1004, 'Chennai', 'Market Analysis'),
+(1005, 'Bengaluru', 'Cloud Infra'),
+(1006, 'Hyderabad', 'Automation');
+
+INSERT INTO ASSIGNED_TO VALUES
+(101, 1001, 'Manager'),
+(102, 1002, 'Analyst'),
+(103, 1003, 'Developer'),
+(104, 1003, 'Tester'),
+(105, 1002, 'Accountant'),
+(106, 1005, 'Developer'),
+(107, 1001, 'HR Executive'),
+(103, 1001, 'Developer');
+
+INSERT INTO INCENTIVES VALUES
+(101, '2024-01-30', 5000),
+(102, '2024-02-12', 3000),
+(105, '2024-01-18', 2000);
+
+
+SELECT MGR_NO, COUNT(*) AS employee_count
+FROM EMPLOYEE22
+GROUP BY MGR_NO
+HAVING COUNT(*) = (
+    SELECT MAX(cnt)
+    FROM (
+        SELECT COUNT(*) AS cnt
+        FROM EMPLOYEE22
+        GROUP BY MGR_NO
+    ) AS manager_counts
+);
+
+SELECT 
+    M.ENAME AS Manager_Name,
+    M.SAL AS Manager_Salary,
+    AVG(E.SAL) AS Avg_Employee_Salary
+FROM EMPLOYEE22 M
+JOIN EMPLOYEE22 E 
+    ON E.MGR_NO = M.EMPNO
+GROUP BY M.EMPNO, M.ENAME, M.SAL
+HAVING M.SAL > AVG(E.SAL);
+
+
+SELECT 
+    d.DNAME,
+    E2.ENAME AS Second_Level_Manager
+FROM DEPT d
+JOIN EMPLOYEE22 E1 ON d.DEPTNO = E1.DEPTNO         -- employees in department
+LEFT JOIN EMPLOYEE22 M1 ON E1.MGR_NO = M1.EMPNO    -- their manager
+JOIN EMPLOYEE22 E2 ON E2.MGR_NO = E1.EMPNO         -- employees managed by top-level manager
+WHERE M1.EMPNO IS NULL                             -- E1 is top-level manager
+GROUP BY d.DNAME, E2.ENAME;
+
+SELECT e.*
+FROM EMPLOYEE22 e
+JOIN INCENTIVES i ON e.EMPNO = i.EMPNO
+WHERE i.INCENTIVE_DATE BETWEEN '2019-01-01' AND '2019-01-31'
+AND i.INCENTIVE_AMOUNT = (
+    SELECT DISTINCT INCENTIVE_AMOUNT
+    FROM INCENTIVES
+    WHERE INCENTIVE_DATE BETWEEN '2019-01-01' AND '2019-01-31'
+    ORDER BY INCENTIVE_AMOUNT DESC
+    LIMIT 1 OFFSET 1
+);
+
+SELECT 
+    E.EMPNO,
+    E.ENAME,
+    E.DEPTNO,
+    M.ENAME AS Manager_Name,
+    M.DEPTNO AS Manager_Dept
+FROM EMPLOYEE22 E
+JOIN EMPLOYEE22 M
+    ON E.MGR_NO = M.EMPNO       -- match employee to manager
+WHERE E.DEPTNO = M.DEPTNO;
